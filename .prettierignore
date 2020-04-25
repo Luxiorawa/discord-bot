@@ -1,0 +1,13 @@
+# Exclude everything by default
+/**/*
+
+# Include all folders
+!/**/*/
+
+# But exclude node_modules folders anywhere
+node_modules/
+
+## file extensions
+
+!*.js
+!*.json
