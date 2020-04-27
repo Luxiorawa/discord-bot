@@ -13,6 +13,7 @@ const readFile = promisify(fs.readFile);
 const unlink = promisify(fs.unlink);
 const sleep = promisify(setTimeout);
 const imgFolder = "./Assets/img/";
+const osuStarRating = require("osu-sr-calculator");
 
 module.exports = {
 	name: "recent",
@@ -21,15 +22,59 @@ module.exports = {
 	aliases: ["rc"],
 	async execute(message) {
 		try {
+			let mods = "";
 			const osuUsername = usersList[message.member.user.tag];
 			const user = await OsuService.getUserInfo(osuUsername);
 			const recent = await OsuService.getUserRecent(osuUsername);
 			const beatmap = await OsuService.getBeatmapInfo(recent.beatmap_id);
 
-			// await BloodcatService.getBeatmapFiles(beatmap.title, beatmap.beatmapset_id);
+			await BloodcatService.getBeatmapFiles(beatmap.title, beatmap.beatmapset_id);
 
-			// // // Workaround, to fix
-			// await sleep(500);
+			// Workaround, to fix
+			await sleep(500);
+
+			console.log(recent);
+			console.log(beatmap);
+
+			switch (recent.enabled_mods) {
+				case "0":
+					mods = "None";
+					break;
+				case "1":
+					mods = "NoFail";
+					break;
+				case "2":
+					mods = "Easy";
+					break;
+				case "8":
+					mods = "Hidden";
+					break;
+				case "16":
+					mods = "HardRock";
+					break;
+				case "64":
+					mods = "DoubleTime";
+					break;
+				case "128":
+					mods = "Relax";
+					break;
+				case "256":
+					mods = "HalfTime";
+					break;
+				case "512":
+					mods = "NightCore";
+					break;
+				case "1024":
+					mods = "FlashLight";
+					break;
+				default:
+					break;
+			}
+
+			let beatmapDifficulty = await osuStarRating.calculateStarRating(beatmap.beatmap_id, [], true);
+			console.log(beatmapDifficulty);
+
+			console.log(mods);
 
 			const canvas = Canvas.createCanvas(640, 360);
 			const ctx = canvas.getContext("2d");
@@ -42,7 +87,6 @@ module.exports = {
 			let targetFileCurrentDiff = dirContent.filter((file) => {
 				return path.basename(file).match(beatmap.version);
 			})[0];
-			console.log(targetFileCurrentDiff);
 
 			const readInterface = readline.createInterface({
 				input: fs.createReadStream(`${dest}${targetFileCurrentDiff}`),
@@ -108,36 +152,34 @@ module.exports = {
 				20
 			);
 
-			ctx.fillText(`Durée: ${beatmap.hit_length}  BPM: ${beatmap.bpm}`);
+			mods != "None" ? adjustBeatmapRatesWithMods(mods) : null;
+
+			ctx.fillText(`Durée: ${beatmap.hit_length}  BPM: ${beatmap.bpm}`, canvas.width - 10, 40);
 
 			ctx.textAlign = "left";
 			// Body text
 			let baseWidth = 80;
-			let index = 0;
-			let totalWidth = 0;
 
 			const hit300 = await Canvas.loadImage(`${imgFolder}hit300.png`);
 			ctx.drawImage(hit300, 10, 100, 33, 15);
 			var individualDigits300 = recent.count300.split("").map(Number);
 
+			let lastDigitWidth = 0;
+
 			for (let digit of individualDigits300) {
 				let digitLoaded = await Canvas.loadImage(`${imgFolder}${digit}.png`);
-
 				if (digit != 1) {
-					ctx.drawImage(digitLoaded, baseWidth + 10 * index, 105, 10, 12);
-					totalWidth += 10;
+					ctx.drawImage(digitLoaded, baseWidth + lastDigitWidth, 102, 10, 12);
+					lastDigitWidth += 10;
 				} else {
-					ctx.drawImage(digitLoaded, baseWidth + 10 * index, 105, 3, 12);
-					totalWidth += 3;
+					ctx.drawImage(digitLoaded, baseWidth + lastDigitWidth, 102, 3, 12);
+					lastDigitWidth += 6;
 				}
-
-				index++;
 			}
 
 			let comboX = await Canvas.loadImage(`${imgFolder}combo-x.png`);
-			ctx.drawImage(comboX, baseWidth + 2 + totalWidth, 110, 7, 8);
-			index = 0;
-			totalWidth = 0;
+			ctx.drawImage(comboX, baseWidth + lastDigitWidth, 107, 7, 8);
+			lastDigitWidth = 0;
 
 			const hit100 = await Canvas.loadImage(`${imgFolder}hit100.png`);
 			ctx.drawImage(hit100, 10, 150, 26, 15);
@@ -147,19 +189,16 @@ module.exports = {
 				let digitLoaded = await Canvas.loadImage(`${imgFolder}${digit}.png`);
 
 				if (digit != 1) {
-					ctx.drawImage(digitLoaded, baseWidth + 10 * index, 155, 10, 12);
-					totalWidth += 10;
+					ctx.drawImage(digitLoaded, baseWidth + lastDigitWidth, 152, 10, 12);
+					lastDigitWidth += 10;
 				} else {
-					ctx.drawImage(digitLoaded, baseWidth + 10 * index, 155, 3, 12);
-					totalWidth += 3;
+					ctx.drawImage(digitLoaded, baseWidth + lastDigitWidth, 152, 3, 12);
+					lastDigitWidth += 6;
 				}
-
-				index++;
 			}
 			comboX = await Canvas.loadImage(`${imgFolder}combo-x.png`);
-			ctx.drawImage(comboX, baseWidth + 2 + totalWidth, 160, 7, 8);
-			index = 0;
-			totalWidth = 0;
+			ctx.drawImage(comboX, baseWidth + lastDigitWidth, 157, 7, 8);
+			lastDigitWidth = 0;
 
 			const hit50 = await Canvas.loadImage(`${imgFolder}hit50.png`);
 			ctx.drawImage(hit50, 10, 200, 22, 15);
@@ -169,39 +208,35 @@ module.exports = {
 				let digitLoaded = await Canvas.loadImage(`${imgFolder}${digit}.png`);
 
 				if (digit != 1) {
-					ctx.drawImage(digitLoaded, baseWidth + 10 * index, 205, 10, 12);
-					totalWidth += 10;
+					ctx.drawImage(digitLoaded, baseWidth + lastDigitWidth, 202, 10, 12);
+					lastDigitWidth += 10;
 				} else {
-					ctx.drawImage(digitLoaded, baseWidth + 10 * index, 205, 3, 12);
-					totalWidth += 3;
+					ctx.drawImage(digitLoaded, baseWidth + lastDigitWidth, 202, 3, 12);
+					lastDigitWidth += 6;
 				}
-				index++;
 			}
 			comboX = await Canvas.loadImage(`${imgFolder}combo-x.png`);
-			ctx.drawImage(comboX, baseWidth + 2 + totalWidth, 210, 7, 8);
-			index = 0;
-			totalWidth = 0;
+			ctx.drawImage(comboX, baseWidth + lastDigitWidth, 207, 7, 8);
+			lastDigitWidth = 0;
 
 			const hit0 = await Canvas.loadImage(`${imgFolder}hit0.png`);
-			ctx.drawImage(hit0, 10, 250, 20, 21);
+			ctx.drawImage(hit0, 10, 250, 15, 16);
 			var individualDigits0 = recent.countmiss.split("").map(Number);
 
 			for (let digit of individualDigits0) {
 				let digitLoaded = await Canvas.loadImage(`${imgFolder}${digit}.png`);
 
 				if (digit != 1) {
-					ctx.drawImage(digitLoaded, baseWidth + 10 * index, 255, 10, 12);
-					totalWidth += 10;
+					ctx.drawImage(digitLoaded, baseWidth + lastDigitWidth, 252, 10, 12);
+					lastDigitWidth += 10;
 				} else {
-					ctx.drawImage(digitLoaded, baseWidth + 10 * index, 255, 3, 12);
-					totalWidth += 3;
+					ctx.drawImage(digitLoaded, baseWidth + lastDigitWidth, 252, 3, 12);
+					lastDigitWidth += 6;
 				}
-				index++;
 			}
 			comboX = await Canvas.loadImage(`${imgFolder}combo-x.png`);
-			ctx.drawImage(comboX, baseWidth + 2 + totalWidth, 260, 7, 8);
-			index = 0;
-			totalWidth = 0;
+			ctx.drawImage(comboX, baseWidth + lastDigitWidth, 257, 7, 8);
+			lastDigitWidth = 0;
 
 			let combo = recent.maxcombo;
 			let maxCombo = beatmap.max_combo;
@@ -216,33 +251,30 @@ module.exports = {
 				let digitLoaded = await Canvas.loadImage(`${imgFolder}${digit}.png`);
 
 				if (digit != 1) {
-					ctx.drawImage(digitLoaded, 10 + 10 * index, 320, 10, 12);
-					totalWidth += 10;
+					ctx.drawImage(digitLoaded, 10 + lastDigitWidth, 320, 10, 12);
+					lastDigitWidth += 10;
 				} else {
-					ctx.drawImage(digitLoaded, 10 + 10 * index, 320, 3, 12);
-					totalWidth += 3;
+					ctx.drawImage(digitLoaded, 10 + lastDigitWidth, 320, 3, 12);
+					lastDigitWidth += 6;
 				}
-				index++;
 			}
 
 			ctx.font = "15px sans-serif";
-			ctx.fillText("/", 25 + totalWidth, 330);
+			ctx.fillText("/", 15 + lastDigitWidth, 330);
+			lastDigitWidth += 15;
 
-			index += 2;
 			for (let digit of individualDigitsMaxCombo) {
 				let digitLoaded = await Canvas.loadImage(`${imgFolder}${digit}.png`);
 
 				if (digit != 1) {
-					ctx.drawImage(digitLoaded, 10 + 10 * index, 320, 10, 12);
-					totalWidth += 10;
+					ctx.drawImage(digitLoaded, 10 + lastDigitWidth, 320, 10, 12);
+					lastDigitWidth += 10;
 				} else {
-					ctx.drawImage(digitLoaded, 10 + 10 * index, 320, 3, 12);
-					totalWidth += 3;
+					ctx.drawImage(digitLoaded, 10 + lastDigitWidth, 320, 3, 12);
+					lastDigitWidth += 6;
 				}
-				index++;
 			}
-			index = 0;
-			totalWidth = 0;
+			lastDigitWidth = 0;
 
 			let upper = 50 * parseInt(recent.count50) + 100 * parseInt(recent.count100) + 300 * parseInt(recent.count300);
 			let down = 300 * (parseInt(recent.countmiss) + parseInt(recent.count50) + parseInt(recent.count100) + parseInt(recent.count300));
@@ -257,29 +289,28 @@ module.exports = {
 			for (let char of individualCharAccuracy) {
 				let charLoaded = char !== "." ? await Canvas.loadImage(`${imgFolder}${char}.png`) : await Canvas.loadImage(`${imgFolder}point.png`);
 				if (char === "1") {
-					ctx.drawImage(charLoaded, 300 + 10 * index, 320, 3, 12);
-					totalWidth += 3;
+					ctx.drawImage(charLoaded, 300 + lastDigitWidth, 320, 3, 12);
+					lastDigitWidth += 3;
 				} else if (char === ".") {
-					ctx.drawImage(charLoaded, 300 + 10 * index, 327, 6, 6);
-					totalWidth += 6;
+					ctx.drawImage(charLoaded, 300 + lastDigitWidth, 327, 6, 6);
+					lastDigitWidth += 6;
 				} else {
-					ctx.drawImage(charLoaded, 300 + 10 * index, 320, 10, 12);
-					totalWidth += 10;
+					ctx.drawImage(charLoaded, 300 + lastDigitWidth, 320, 10, 12);
+					lastDigitWidth += 10;
 				}
-				index++;
 			}
 			let percent = await Canvas.loadImage(`${imgFolder}score-percent.png`);
-			ctx.drawImage(percent, 300 + 7 + totalWidth, 318, 10, 16);
+			ctx.drawImage(percent, 300 + 7 + lastDigitWidth, 318, 10, 16);
 
 			const attachment = new Discord.MessageAttachment(canvas.toBuffer(), `${beatmap.title}.jpg`);
 
 			message.channel.send(attachment);
 
-			// console.log(`Deleting folder ${beatmap.beatmapset_id}`)
-			// deleteFolderRecursive(`./${beatmap.beatmapset_id}`)
+			console.log(`Deleting folder ${beatmap.beatmapset_id}`);
+			deleteFolderRecursive(`./${beatmap.beatmapset_id}`);
 
-			// console.log(`Deleting file .osz ${beatmap.beatmapset_id}`);
-			// await unlink(`./${beatmap.beatmapset_id}.osz`);
+			console.log(`Deleting file .osz ${beatmap.beatmapset_id}`);
+			await unlink(`./${beatmap.beatmapset_id}.osz`);
 		} catch (error) {
 			console.log(error);
 			message.channel.send("An error occured during $rc command");
@@ -302,3 +333,7 @@ var deleteFolderRecursive = function (path) {
 		fs.rmdirSync(path);
 	}
 };
+
+function adjustBeatmapRatesWithMods(mods) {
+	return true;
+}
