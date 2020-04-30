@@ -3,8 +3,6 @@ const request = require("request");
 const unzipper = require("unzipper");
 
 exports.getBeatmapFiles = async (title, beatmapSetId) => {
-	console.log(title);
-	console.log(beatmapSetId);
 	const file = fs.createWriteStream(`${beatmapSetId}.osz`);
 
 	await new Promise((resolve, reject) => {

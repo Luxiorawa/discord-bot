@@ -274,7 +274,7 @@ async function generateBody(ctx, beatmap, recent) {
 	let upper = 50 * parseInt(recent.count50) + 100 * parseInt(recent.count100) + 300 * parseInt(recent.count300);
 	let down = 300 * (parseInt(recent.countmiss) + parseInt(recent.count50) + parseInt(recent.count100) + parseInt(recent.count300));
 
-	let accuracy = parseFloat(upper / down).toFixed(4) * 100;
+	let accuracy = parseFloat((upper / down) * 100).toFixed(2);
 
 	ctx.font = "18px sans-serif";
 	ctx.fillText("Accuracy", 285, 310);
