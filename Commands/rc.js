@@ -9,7 +9,6 @@ const usersList = require("./../Config/users.json");
 const { promisify } = require("util");
 const path = require("path");
 const readdir = promisify(fs.readdir);
-const readFile = promisify(fs.readFile);
 const exists = promisify(fs.exists);
 const unlink = promisify(fs.unlink);
 const sleep = promisify(setTimeout);
@@ -23,7 +22,6 @@ module.exports = {
 		try {
 			let msg;
 			const osuUsername = usersList[message.member.user.tag];
-			const user = await OsuService.getUserInfo(osuUsername);
 			const recent = await OsuService.getUserRecent(osuUsername);
 
 			if (!recent) {
@@ -48,7 +46,7 @@ module.exports = {
 					msg = "No background found for this play <@165503887103623168>";
 				}
 
-				await generateHeader(ctx, canvas.width, canvas.height, beatmap, recent, user);
+				await generateHeader(ctx, canvas.width, canvas.height, beatmap, recent, osuUsername);
 				await generateBody(ctx, beatmap, recent);
 
 				const attachment = new Discord.MessageAttachment(canvas.toBuffer(), `${beatmap.title}.jpg`);
@@ -112,7 +110,7 @@ async function findBackgroundImageForCurrentDiff(beatmapset_id, diffPlayed) {
 	return backgroundNameToFilter;
 }
 
-async function generateHeader(ctx, canvasWidth, canvasHeight, beatmap, recent, user) {
+async function generateHeader(ctx, canvasWidth, canvasHeight, beatmap, recent, osuUsername) {
 	await new Promise((resolve) => {
 		// Upper rectangle (beatmap name, player, author, difficulty)
 		ctx.globalAlpha = 0.7;
@@ -133,7 +131,7 @@ async function generateHeader(ctx, canvasWidth, canvasHeight, beatmap, recent, u
 		ctx.font = "18px sans-serif";
 		ctx.fillText(`Created by ${beatmap.creator}`, 10, 50);
 		let dateFr = moment(recent.date).add(2, "hours").format("YYYY-MM-DD HH:mm:ss");
-		ctx.fillText(`Played by ${user.username} on ${dateFr}`, 10, 75);
+		ctx.fillText(`Played by ${osuUsername} on ${dateFr}`, 10, 75);
 
 		ctx.font = "16px sans-serif";
 		ctx.textAlign = "right";
