@@ -8,6 +8,7 @@ const BloodcatService = require("./../Services/bloodcat");
 const usersList = require("./../Config/users.json");
 const { promisify } = require("util");
 const path = require("path");
+const osu = require("ojsama");
 const readdir = promisify(fs.readdir);
 const exists = promisify(fs.exists);
 const unlink = promisify(fs.unlink);
@@ -20,20 +21,29 @@ module.exports = {
 	aliases: ["rc"],
 	async execute(message) {
 		try {
+			console.log("");
+			console.time("Request recent");
+
 			let msg;
 			const osuUsername = usersList[message.member.user.tag];
 			const recent = await OsuService.getUserRecent(osuUsername);
 
+			console.timeEnd("Request recent");
+
 			if (!recent) {
 				message.channel.send("No recent score");
 			} else {
+				console.time("BeatmapInfo and Download");
 				const beatmap = await getBeatmapInfoAndDownloadBeatmap(recent.beatmap_id);
+				console.timeEnd("BeatmapInfo and Download");
 
 				const canvas = Canvas.createCanvas(640, 360);
 				const ctx = canvas.getContext("2d");
 
+				console.time("Find background");
 				// Will check all files ending with .png or .jpg (assume the only img in the directory is the background)
 				const backgroundNameToFilter = await findBackgroundImageForCurrentDiff(beatmap.beatmapset_id, beatmap.version);
+				console.timeEnd("Find background");
 
 				if (backgroundNameToFilter) {
 					// Regex to delete outer "" from the background diff
@@ -46,16 +56,26 @@ module.exports = {
 					msg = "No background found for this play <@165503887103623168>";
 				}
 
+				console.time("Generate Header");
 				await generateHeader(ctx, canvas.width, canvas.height, beatmap, recent, osuUsername);
+				console.timeEnd("Generate Header");
+
+				console.time("Generate Body");
 				await generateBody(ctx, beatmap, recent);
+				console.timeEnd("Generate Body");
 
+				console.time("Canvas toBuffer()");
 				const attachment = new Discord.MessageAttachment(canvas.toBuffer(), `${beatmap.title}.jpg`);
+				console.timeEnd("Canvas toBuffer()");
 
+				console.time("Message Sending");
 				if (msg) {
 					message.channel.send(msg, attachment);
 				} else {
 					message.channel.send(attachment);
 				}
+				console.timeEnd("Message Sending");
+				console.log("");
 			}
 		} catch (error) {
 			console.log(error);
@@ -294,4 +314,65 @@ async function generateBody(ctx, beatmap, recent) {
 	}
 	let percent = await Canvas.loadImage(`./Assets/img/score-percent.png`);
 	ctx.drawImage(percent, 300 + 7 + lastDigitWidth, 318, 10, 16);
+
+	await generatePpValues(ctx, beatmap, recent);
+}
+
+async function generatePpValues(ctx, beatmap, recent) {
+	let ppArray = [];
+	let mods = osu.modbits.none;
+
+	// Play pp value
+	let dirContent = await readdir(beatmap.beatmapset_id);
+
+	let targetFileCurrentDiff = dirContent.filter((file) => {
+		return path.basename(file).match(beatmap.version);
+	})[0];
+
+	await new Promise((resolve, reject) => {
+		var parser = new osu.parser();
+		let readStream = fs.createReadStream(`${beatmap.beatmapset_id}/${targetFileCurrentDiff}`);
+
+		readline
+			.createInterface({
+				input: readStream,
+				terminal: false
+			})
+			.on("line", parser.feed_line.bind(parser))
+			.on("close", function () {
+				var map = parser.map;
+
+				var stars = new osu.diff().calc({ map: map, mods: mods });
+
+				var pp = osu.ppv2({
+					stars: stars,
+					combo: parseInt(recent.maxcombo),
+					n300: parseInt(recent.count300),
+					n100: parseInt(recent.count100),
+					n50: parseInt(recent.count50),
+					nmiss: parseInt(recent.countmiss)
+				});
+
+				ppArray.push(pp.toString());
+
+				// SS
+				ppArray.push(osu.ppv2({ map: map, mods: mods }).toString());
+
+				// 99
+				ppArray.push(osu.ppv2({ stars: stars, combo: map.max_combo(), acc_percent: 99.0 }).toString());
+
+				// 98
+				ppArray.push(osu.ppv2({ stars: stars, combo: map.max_combo(), acc_percent: 98.0 }).toString());
+
+				// 97
+				ppArray.push(osu.ppv2({ stars: stars, combo: map.max_combo(), acc_percent: 97.0 }).toString());
+
+				// 95
+				ppArray.push(osu.ppv2({ stars: stars, combo: map.max_combo(), acc_percent: 95.0 }).toString());
+
+				resolve();
+			});
+	});
+
+	return ppArray;
 }

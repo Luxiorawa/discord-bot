@@ -34,6 +34,7 @@
         "morgan": "^1.10.0",
         "mysql2": "^2.1.0",
         "node-fetch": "^2.6.0",
+        "ojsama": "^1.2.5",
         "osu-sr-calculator": "^1.0.9",
         "prettier": "^2.0.5",
         "request": "^2.88.2",
