@@ -13,6 +13,7 @@ const readdir = promisify(fs.readdir);
 const exists = promisify(fs.exists);
 const unlink = promisify(fs.unlink);
 const sleep = promisify(setTimeout);
+require("http").globalAgent.maxSockets = 1000;
 
 module.exports = {
 	name: "recent",
@@ -377,3 +378,5 @@ async function generatePpValues(ctx, beatmap, recent) {
 
 	return ppArray;
 }
+
+async function deleteUnnecessaryFiles(beatmapsetId) {}
