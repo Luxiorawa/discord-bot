@@ -1,24 +1,23 @@
 const fs = require("fs");
-const request = require("request");
 const unzipper = require("unzipper");
+const download = require("download");
 
-exports.getBeatmapFiles = async (title, beatmapSetId) => {
+exports.getBeatmapFiles = async (beatmapSetId) => {
 	const file = fs.createWriteStream(`${beatmapSetId}.osz`);
+	download(`https://bloodcat.com/osu/s/${beatmapSetId}`).pipe(file);
 
+	console.time("Promise");
 	await new Promise((resolve, reject) => {
-		let stream = request.get(`https://bloodcat.com/osu/s/${beatmapSetId}`);
-		stream.pipe(file);
 		file
-			.on("finish", async () => {
-				await fs.createReadStream(`${beatmapSetId}.osz`).pipe(await unzipper.Extract({ path: beatmapSetId }));
+			.on("finish", () => {
+				fs.createReadStream(`${beatmapSetId}.osz`).pipe(unzipper.Extract({ path: beatmapSetId }));
 				resolve();
 			})
 			.on("error", (error) => {
 				reject(error);
 			});
-	}).catch((error) => {
-		console.log(`Something happened: ${error}`);
 	});
+	console.timeEnd("Promise");
 
 	return true;
 };

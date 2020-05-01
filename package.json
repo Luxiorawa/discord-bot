@@ -1,43 +1,34 @@
 {
-    "name": "discord-bot",
-    "version": "1.0.0",
-    "description": "BOT Discord node.js",
-    "main": "app.js",
-    "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1",
-        "start": "node .",
-        "lint": "eslint ."
-    },
-    "repository": {
-        "type": "git",
-        "url": "git+ssh://git@gitlab.com/Luxioraw/discord-bot.git"
-    },
-    "author": "Luxior",
-    "license": "SEE LICENSE IN ./LICENSE",
-    "bugs": {
-        "url": "https://gitlab.com/Luxioraw/discord-bot/issues"
-    },
-    "homepage": "https://gitlab.com/Luxioraw/discord-bot#readme",
-    "dependencies": {
-        "body-parser": "^1.19.0",
-        "canvas": "^2.6.1",
-        "compression": "^1.7.4",
-        "discord.js": "^12.2.0",
-        "dotenv": "^8.2.0",
-        "eslint": "^6.8.0",
-        "express": "^4.17.1",
-        "express-session": "^1.17.1",
-        "express-validator": "^6.4.0",
-        "jimp": "^0.10.3",
-        "jsonwebtoken": "^8.5.1",
-        "moment": "^2.24.0",
-        "morgan": "^1.10.0",
-        "mysql2": "^2.1.0",
-        "node-fetch": "^2.6.0",
-        "ojsama": "^1.2.5",
-        "osu-sr-calculator": "^1.0.9",
-        "prettier": "^2.0.5",
-        "request": "^2.88.2",
-        "unzipper": "^0.10.11"
-    }
+	"name": "discord-bot",
+	"version": "1.0.0",
+	"description": "BOT Discord node.js",
+	"main": "app.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"start": "node .",
+		"lint": "eslint ."
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+ssh://git@gitlab.com/Luxioraw/discord-bot.git"
+	},
+	"author": "Luxior",
+	"license": "SEE LICENSE IN ./LICENSE",
+	"bugs": {
+		"url": "https://gitlab.com/Luxioraw/discord-bot/issues"
+	},
+	"homepage": "https://gitlab.com/Luxioraw/discord-bot#readme",
+	"dependencies": {
+		"canvas": "^2.6.1",
+		"discord.js": "^12.2.0",
+		"dotenv": "^8.2.0",
+		"download": "^8.0.0",
+		"eslint": "^6.8.0",
+		"jsonwebtoken": "^8.5.1",
+		"moment": "^2.24.0",
+		"node-fetch": "^2.6.0",
+		"ojsama": "^1.2.5",
+		"prettier": "^2.0.5",
+		"unzipper": "^0.10.11"
+	}
 }

@@ -21,7 +21,7 @@ module.exports = {
 	aliases: ["rc"],
 	async execute(message) {
 		try {
-			console.log("");
+			console.log("***");
 			console.time("Request recent");
 
 			let msg;
@@ -33,9 +33,7 @@ module.exports = {
 			if (!recent) {
 				message.channel.send("No recent score");
 			} else {
-				console.time("BeatmapInfo and Download");
 				const beatmap = await getBeatmapInfoAndDownloadBeatmap(recent.beatmap_id);
-				console.timeEnd("BeatmapInfo and Download");
 
 				const canvas = Canvas.createCanvas(640, 360);
 				const ctx = canvas.getContext("2d");
@@ -75,7 +73,7 @@ module.exports = {
 					message.channel.send(attachment);
 				}
 				console.timeEnd("Message Sending");
-				console.log("");
+				console.log("***");
 			}
 		} catch (error) {
 			console.log(error);
@@ -85,11 +83,14 @@ module.exports = {
 };
 
 async function getBeatmapInfoAndDownloadBeatmap(beatmapId) {
+	console.time("Request beatmap");
 	const beatmap = await OsuService.getBeatmapInfo(beatmapId);
+	console.timeEnd("Request beatmap");
+
 	const alreadyDownloaded = await exists(beatmap.beatmapset_id);
 
 	if (!alreadyDownloaded) {
-		await BloodcatService.getBeatmapFiles(beatmap.title, beatmap.beatmapset_id);
+		await BloodcatService.getBeatmapFiles(beatmap.beatmapset_id);
 
 		// Workaround, to fix
 		await sleep(500);
