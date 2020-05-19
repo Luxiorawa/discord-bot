@@ -26,6 +26,7 @@
 		"eslint": "^6.8.0",
 		"jsonwebtoken": "^8.5.1",
 		"moment": "^2.24.0",
+		"mysql2": "^2.1.0",
 		"node-fetch": "^2.6.0",
 		"ojsama": "^1.2.5",
 		"prettier": "^2.0.5",
