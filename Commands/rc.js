@@ -1,10 +1,11 @@
+const MysqlMiddleware = require("./../Middlewares/Mysql");
 const fs = require("fs");
 const moment = require("moment");
 const Canvas = require("canvas");
 const readline = require("readline");
 const Discord = require("discord.js");
 const OsuService = require("./../Services/osu");
-const BloodcatService = require("./../Services/bloodcat");
+const beatmapMirror = require("../Services/beatmapMirror");
 const usersList = require("./../Config/users.json");
 const { promisify } = require("util");
 const path = require("path");
@@ -26,7 +27,14 @@ module.exports = {
 			console.time("Request recent");
 
 			let msg;
-			const osuUsername = usersList[message.member.user.tag];
+			let value = await isUserIdInDatabase(message.member.user.id);
+
+			if (value == false) {
+				message.channel.send("Enter your osu username first by doing !setOsuUsername Your Username Here");
+			}
+
+			const osuUsername = value;
+
 			const recent = await OsuService.getUserRecent(osuUsername);
 
 			console.timeEnd("Request recent");
@@ -40,12 +48,12 @@ module.exports = {
 				const ctx = canvas.getContext("2d");
 
 				console.time("Find background");
-				// Will check all files ending with .png or .jpg (assume the only img in the directory is the background)
+				// Will check all files ending with .png or .jpg (assuming the only img in the directory is the background)
 				const backgroundNameToFilter = await findBackgroundImageForCurrentDiff(beatmap.beatmapset_id, beatmap.version);
 				console.timeEnd("Find background");
 
 				if (backgroundNameToFilter) {
-					// Regex to delete outer "" from the background diff
+					// Regex to delete outer "" from the background file diff
 					let backgroundForCurrentDiff = backgroundNameToFilter.replace(/"([^"]+(?="))"/g, "$1");
 
 					const background = await Canvas.loadImage(`./${beatmap.beatmapset_id}/${backgroundForCurrentDiff}`);
@@ -55,13 +63,10 @@ module.exports = {
 					msg = "No background found for this play <@165503887103623168>";
 				}
 
-				console.time("Generate Header");
-				await generateHeader(ctx, canvas.width, canvas.height, beatmap, recent, osuUsername);
-				console.timeEnd("Generate Header");
+				console.time("Generate Canvas");
+				await Promise.all([generateHeader(ctx, canvas.width, canvas.height, beatmap, recent, osuUsername), generateBody(ctx, beatmap, recent)]);
 
-				console.time("Generate Body");
-				await generateBody(ctx, beatmap, recent);
-				console.timeEnd("Generate Body");
+				console.timeEnd("Generate Canvas");
 
 				console.time("Canvas toBuffer()");
 				const attachment = new Discord.MessageAttachment(canvas.toBuffer(), `${beatmap.title}.jpg`);
@@ -74,6 +79,11 @@ module.exports = {
 					message.channel.send(attachment);
 				}
 				console.timeEnd("Message Sending");
+
+				console.time("Cleanup Files");
+				await deleteUnnecessaryFiles(beatmap.beatmapset_id);
+				console.timeEnd("Cleanup Files");
+
 				console.log("***");
 			}
 		} catch (error) {
@@ -83,6 +93,15 @@ module.exports = {
 	}
 };
 
+async function isUserIdInDatabase(discordId) {
+	let user = await MysqlMiddleware.select(`SELECT osu_username FROM users WHERE user_discord_id = ?`, [discordId]);
+	if (user && user.osu_username) {
+		return user.osu_username;
+	} else {
+		return false;
+	}
+}
+
 async function getBeatmapInfoAndDownloadBeatmap(beatmapId) {
 	console.time("Request beatmap");
 	const beatmap = await OsuService.getBeatmapInfo(beatmapId);
@@ -91,7 +110,7 @@ async function getBeatmapInfoAndDownloadBeatmap(beatmapId) {
 	const alreadyDownloaded = await exists(beatmap.beatmapset_id);
 
 	if (!alreadyDownloaded) {
-		await BloodcatService.getBeatmapFiles(beatmap.beatmapset_id);
+		await beatmapMirror.getBeatmapFiles(beatmap.beatmapset_id);
 
 		// Workaround, to fix
 		await sleep(500);
@@ -379,4 +398,36 @@ async function generatePpValues(ctx, beatmap, recent) {
 	return ppArray;
 }
 
-async function deleteUnnecessaryFiles(beatmapsetId) {}
+async function deleteUnnecessaryFiles(beatmapsetId) {
+	if (await exists(beatmapsetId)) {
+		let folder = `./${beatmapsetId}/`;
+		let dirContent = await readdir(beatmapsetId);
+
+		let wavFiles = dirContent.filter((file) => {
+			return path.basename(file).match(".wav");
+		});
+
+		let aviFiles = dirContent.filter((file) => {
+			return path.basename(file).match(".avi");
+		});
+
+		let mp3Files = dirContent.filter((file) => {
+			return path.basename(file).match(".mp3");
+		});
+
+		for (let wavFile of wavFiles) {
+			await unlink(`${folder}${wavFile}`);
+		}
+
+		for (let aviFile of aviFiles) {
+			await unlink(`${folder}${aviFile}`);
+		}
+
+		for (let mp3File of mp3Files) {
+			await unlink(`${folder}${mp3File}`);
+		}
+
+		return true;
+	}
+	return false;
+}
